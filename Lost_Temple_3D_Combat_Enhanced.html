@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101d2a">
+<title>The Lost Temple — 3D Combat</title><link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07121b;color:#fff;font-family:system-ui,Arial,sans-serif;touch-action:none}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block}
+#top{position:fixed;top:0;left:0;right:0;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none;background:linear-gradient(#06121cbb,transparent)}
+.brand{font-weight:900;color:#ffdc7b;text-shadow:0 2px 4px #000;font-size:clamp(17px,3vw,26px)}.stats{text-align:right;font-size:13px;font-weight:800;text-shadow:0 2px 4px #000;line-height:1.6}.stats b{color:#ffdb69}
+#mission{position:fixed;left:50%;top:68px;transform:translateX(-50%);width:min(92%,460px);text-align:center;padding:8px 12px;border:1px solid #ffffff35;border-radius:12px;background:#07192599;backdrop-filter:blur(4px);font-size:13px;text-shadow:0 1px 3px #000;pointer-events:none}
+#notice{position:fixed;top:145px;left:50%;transform:translateX(-50%);width:90%;text-align:center;font-weight:800;color:#ffe69b;text-shadow:0 2px 5px #000;pointer-events:none}
+#controls{position:fixed;inset:auto 0 15px 0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 16px;pointer-events:none}
+.padgroup{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(2,50px);gap:5px;pointer-events:auto}
+.btn{border:1px solid #ffffff90;background:#112a3ccc;color:#fff;border-radius:14px;font-size:21px;font-weight:900;box-shadow:0 3px 10px #0006;touch-action:none;user-select:none}
+.btn:active,.btn.down{background:#9b773cdd;transform:scale(.97)}
+#up{grid-column:2;grid-row:1}#left{grid-column:1;grid-row:2}#down{grid-column:2;grid-row:2}#right{grid-column:3;grid-row:2}
+.actions{display:flex;gap:9px;align-items:flex-end;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end;max-width:290px}.action{width:65px;height:65px;border-radius:50%;font-size:12px;line-height:1.2;background:#4a261dcc}.action small{font-size:20px;display:block}.action.heavy{background:#5a3e15dd;width:70px;height:70px}.action.roll{width:53px;height:53px;background:#1e4a55dd}.action.utility{width:53px;height:53px;background:#24513ddd}.action.pause{width:48px;height:48px;background:#343b48dd}
+#overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(#07111dcc,#07111df2);overflow:auto}
+.panel{width:min(560px,100%);padding:23px;border:1px solid #d8b76c;border-radius:20px;background:linear-gradient(145deg,#254b45f5,#102635f7);box-shadow:0 18px 55px #000b}
+h1{font-size:clamp(29px,7vw,48px);line-height:1.05;margin:0 0 10px;color:#ffdc78;text-shadow:0 3px #5c381e}
+.panel p,.panel li{line-height:1.5;color:#e2edf0}.panel ul{padding-left:21px}.primary{width:100%;padding:14px;border:0;border-radius:12px;background:linear-gradient(#f4cd6c,#b57a2e);color:#21180b;font-size:17px;font-weight:1000;margin-top:10px}
+.secondary{padding:10px;border:1px solid #ffffff65;border-radius:10px;background:#ffffff15;color:white;font-weight:800}
+#bossbar{position:fixed;top:180px;left:50%;transform:translateX(-50%);width:min(70%,420px);height:10px;background:#160e0eaa;border:1px solid #ffffff66;border-radius:20px;display:none;overflow:hidden}
+#bossfill{height:100%;width:100%;background:linear-gradient(90deg,#c12727,#ffb342)}
+#hint{position:fixed;bottom:5px;left:0;right:0;text-align:center;font-size:10px;color:#ffffff9c;pointer-events:none}
+@media(max-width:430px){.padgroup{grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,44px)}.action{width:57px;height:57px}.action.heavy{width:62px;height:62px}.actions{gap:6px}#mission{top:65px}#notice{top:137px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="top"><div><div class="brand">⚔ THE LOST TEMPLE</div><div style="font-size:11px">3D jungle combat expedition</div></div><div class="stats">❤️ <b id="health">100</b>%<br>🪙 <b id="coins">0</b> relics<br>⚔ <b id="weapon">IRON SWORD</b></div></div>
+<div id="mission"><b id="missionName">MISSION 1 — THE OVERGROWN PATH</b><br><span id="missionText">Explore the ruins and defeat the guardian.</span></div>
+<div id="notice">Find the relics. Survive the jungle.</div>
+<div id="bossbar"><div id="bossfill"></div></div>
+<div id="controls">
+ <div class="padgroup">
+  <button class="btn" id="up" data-key="forward">▲</button><button class="btn" id="left" data-key="left">◀</button><button class="btn" id="down" data-key="back">▼</button><button class="btn" id="right" data-key="right">▶</button>
+ </div>
+ <div class="actions">
+  <button class="btn action roll" data-key="roll">↻<br>DODGE</button>
+  <button class="btn action utility" data-key="heal">🧪<br><span id="potions">3</span></button>
+  <button class="btn action" data-key="attack"><small>⚔</small>ATTACK</button>
+  <button class="btn action heavy" data-key="heavy"><small>💥</small>HEAVY</button>
+  <button class="btn action pause" id="pauseBtn">Ⅱ<br>PAUSE</button>
+ </div>
+</div>
+<div id="hint">Touch controls • Desktop: WASD/arrows, Space attack, Shift heavy, Q dodge, H potion, P pause • M: sound</div>
+<div id="levelBadge" style="position:fixed;left:50%;bottom:110px;transform:translateX(-50%);font-size:11px;font-weight:900;letter-spacing:1px;color:#ffe29a;text-shadow:0 2px 5px #000;pointer-events:none">CHAPTER I · OVERGROWN PATH</div>
+<div id="overlay"><div class="panel">
+<h1>THE LOST TEMPLE</h1>
+<p><b>A 3D third-person jungle adventure.</b> An ancient Sun Relic has awakened the temple guardians. Fight through overgrown ruins, recover relics, upgrade your weapon, and defeat the mighty Stone Titan.</p>
+<ul><li><b>Explore:</b> move around the 3D jungle and ruined temple.</li><li><b>Combat:</b> quick sword strikes, powerful heavy attacks, and dodge rolls.</li><li><b>Enemies:</b> scouts chase you, guards defend the ruins, and the final boss telegraphs heavy attacks.</li><li><b>Android:</b> on-screen movement and combat controls.</li></ul>
+<p style="font-size:12px">Explore three chapters, discover relics, upgrade your weapons, solve the ancient seal, and survive the Stone Titan. Progress is saved in this browser when storage is available.</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" id="soundBtn">🔊 Sound: On</button><button class="secondary" id="qualityBtn">✨ Graphics: High</button><button class="secondary" id="resetBtn">Reset Save</button></div>
+<button class="primary" id="start">ENTER THE JUNGLE</button>
+</div></div>
+<script>
+(()=>{
+const canvas=document.querySelector('#game'),gl=canvas.getContext('webgl',{antialias:true,alpha:false});
+const $=id=>document.getElementById(id);
+if(!gl){$('overlay').innerHTML='<div class="panel"><h1>WebGL required</h1><p>This device browser does not support WebGL. Try Chrome or another modern browser.</p></div>';return;}
+const vs=`attribute vec3 aPos;attribute vec3 aNormal;uniform mat4 uMVP;uniform mat4 uModel;uniform vec3 uColor;uniform float uGlow;varying vec3 vColor;varying float vLight;void main(){vec3 n=normalize(mat3(uModel)*aNormal);vec3 light=normalize(vec3(-.4,.8,.35));vLight=.36+max(dot(n,light),0.)*.72+uGlow;vColor=uColor;gl_Position=uMVP*vec4(aPos,1.);}`;
+const fs=`precision mediump float;varying vec3 vColor;varying float vLight;void main(){gl_FragColor=vec4(vColor*vLight,1.);}`;
+function shader(type,src){let s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
+let prog=gl.createProgram();gl.attachShader(prog,shader(gl.VERTEX_SHADER,vs));gl.attachShader(prog,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);gl.useProgram(prog);
+const loc={pos:gl.getAttribLocation(prog,'aPos'),normal:gl.getAttribLocation(prog,'aNormal'),mvp:gl.getUniformLocation(prog,'uMVP'),model:gl.getUniformLocation(prog,'uModel'),color:gl.getUniformLocation(prog,'uColor'),glow:gl.getUniformLocation(prog,'uGlow')};
+function cubeData(){let p=[],n=[];const faces=[[[0,0,1],[[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]]],[[0,0,-1],[ [.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]]],[[1,0,0],[[.5,-.5,.5],[.5,-.5,-.5],[.5,.5,-.5],[.5,-.5,.5],[.5,.5,-.5],[.5,.5,.5]]],[[-1,0,0],[[-.5,-.5,-.5],[-.5,-.5,.5],[-.5,.5,.5],[-.5,-.5,-.5],[-.5,.5,.5],[-.5,.5,-.5]]],[[0,1,0],[[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5]]],[[0,-1,0],[[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5]]]];
+faces.forEach(f=>f[1].forEach(v=>{p.push(...v);n.push(...f[0]);}));return {p:new Float32Array(p),n:new Float32Array(n)}}
+let cd=cubeData(),pb=gl.createBuffer(),nb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,cd.p,gl.STATIC_DRAW);gl.enableVertexAttribArray(loc.pos);gl.vertexAttribPointer(loc.pos,3,gl.FLOAT,false,0,0);gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,cd.n,gl.STATIC_DRAW);gl.enableVertexAttribArray(loc.normal);gl.vertexAttribPointer(loc.normal,3,gl.FLOAT,false,0,0);
+const I=()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+function mul(a,b){let o=new Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return o}
+function trans(x,y,z){let m=I();m[12]=x;m[13]=y;m[14]=z;return m}
+function scale(x,y,z){let m=I();m[0]=x;m[5]=y;m[10]=z;return m}
+function rotY(a){let m=I(),c=Math.cos(a),s=Math.sin(a);m[0]=c;m[2]=-s;m[8]=s;m[10]=c;return m}
+function perspective(fovy,asp,n,f){let t=1/Math.tan(fovy/2),o=new Array(16).fill(0);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o}
+function look(eye,at,up){let z=norm(sub(eye,at)),x=norm(cross(up,z)),y=cross(z,x);return [x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,eye),-dot(y,eye),-dot(z,eye),1]}
+const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>{let l=Math.hypot(...a)||1;return a.map(v=>v/l)};
+function drawBox(pos,size,color,yaw=0,glow=0){let model=mul(trans(...pos),mul(rotY(yaw),scale(...size))),mvp=mul(viewProj,model);gl.uniformMatrix4fv(loc.model,false,new Float32Array(model));gl.uniformMatrix4fv(loc.mvp,false,new Float32Array(mvp));gl.uniform3fv(loc.color,new Float32Array(color));gl.uniform1f(loc.glow,glow);gl.drawArrays(gl.TRIANGLES,0,36);}
+const keys={};let started=false,paused=false,frame=0,last=0,health=100,relics=0,weapon=0,potions=3,chapter=0,soundOn=true,highQuality=true,audioCtx=null,player={x:0,z:5,yaw:0,attack:0,heavy:0,roll:0,invuln:0},enemies=[],boss=null,noticeTimer=0;
+const chapters=[{name:'CHAPTER I · OVERGROWN PATH',mission:'MISSION 1 — THE OVERGROWN PATH',desc:'Defeat the guardians and break the seal.',boss:'Stone Titan',hp:360},{name:'CHAPTER II · SUNKEN SANCTUM',mission:'MISSION 2 — SUNKEN SANCTUM',desc:'The sanctum is flooded with ancient magic.',boss:'Temple Warden',hp:470},{name:'CHAPTER III · EMBER CITADEL',mission:'MISSION 3 — EMBER CITADEL',desc:'Enter the burning citadel for the final relic.',boss:'Ash Colossus',hp:600}];
+function sfx(freq=260,dur=.08,type='sine'){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();let o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.055,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}catch(e){}}
+function saveProgress(){try{localStorage.setItem('lostTempleSave',JSON.stringify({chapter,relics,weapon,health,potions}));}catch(e){}}
+function loadProgress(){try{let d=JSON.parse(localStorage.getItem('lostTempleSave')||'null');if(d){chapter=Math.max(0,Math.min(2,d.chapter|0));relics=Math.max(0,d.relics|0);weapon=Math.max(0,Math.min(2,d.weapon|0));health=Math.max(1,Math.min(100,d.health||100));potions=Math.max(0,Math.min(3,d.potions|0));$('coins').textContent=relics;$('weapon').textContent=weapons[weapon].name;$('health').textContent=Math.round(health);$('potions').textContent=potions;}}catch(e){}}
+const weapons=[{name:'IRON SWORD',damage:24,heavy:42},{name:'EMERALD BLADE',damage:34,heavy:58},{name:'SUN CLEAVER',damage:48,heavy:78}];
+function say(t){$('notice').textContent=t;noticeTimer=180}
+function remainingEnemies(){return enemies.filter(e=>e.alive).length;}
+function spawnLevel(){let ch=chapters[chapter];$('missionName').textContent=ch.mission;$('levelBadge').textContent=ch.name;$('missionText').textContent=ch.desc;enemies=[];let positions=[[-4,-6],[4,-9],[0,-15],[-6,-19],[6,-24],[0,-31],[-3,-34],[4,-37]];let count=6+chapter;positions.slice(0,count).forEach((p,i)=>{let hp=(i<2?48:65)+chapter*18;enemies.push({x:p[0],z:p[1],hp,max:hp,type:i<2?'scout':'guard',phase:Math.random()*6,attack:0,wind:0,alive:true});});boss={x:0,z:-43,hp:ch.hp,max:ch.hp,phase:0,wind:0,attack:0,alive:true};$('bossbar').style.display='block';$('bossfill').style.width='100%';}
+function resize(){let dpr=Math.min(devicePixelRatio||1,1.7),w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
+function world(){// forest floor, ruins, trees, pillars, relic stones
+ const biome=chapter===0?[.16,.25,.15]:chapter===1?[.10,.23,.27]:[.28,.12,.08];
+ drawBox([0,-.35,-18],[38,.7,100],biome);
+ for(let i=0;i<(highQuality?34:18);i++){let x=Math.sin(i*12.7)*15,z=3-(i*3.3)%68;if(Math.abs(x-player.x)<2&&Math.abs(z-player.z)<2)continue;drawBox([x,1.1,z],[.55,2.2,.55],[.22,.16,.1]);drawBox([x,2.45,z],[2.2,1.6,2.2],i%2?(chapter===1?[.08,.28,.31]:chapter===2?[.42,.13,.06]:[.08,.28,.14]):(chapter===1?[.12,.32,.34]:chapter===2?[.5,.18,.08]:[.12,.34,.17]));drawBox([x-.5,3.1,z+.2],[1.4,.35,1.2],[.13,.4,.2]);}
+ // stone pathway and ruin blocks
+ for(let i=0;i<22;i++){let z=2-i*2.5;drawBox([Math.sin(i*.6)*1.1,.03,z],[3.2,.14,2.15],[.38,.38,.32]);}
+ for(let side of [-1,1])for(let i=0;i<5;i++){let z=-9-i*6;drawBox([side*5,1.5,z],[1.4,3,1.4],[.36,.34,.27]);drawBox([side*5,3.1,z],[2,.35,1.9],[.48,.43,.31]);}
+ // temple gate
+ for(let side of [-1,1]){drawBox([side*4,2,-39],[1.8,4,1.8],[.48,.38,.22]);drawBox([side*4,4.1,-39],[2.2,.45,2],[.65,.48,.25]);}
+ drawBox([0,4.1,-39],[6.5,.6,1.7],[.63,.46,.23]);
+ // torch flames
+ for(let z of [-10,-23,-36])for(let s of [-1,1]){drawBox([s*4,1.7,z],[.25,1.2,.25],[.18,.12,.08]);drawBox([s*4,2.45,z],[.35,.5,.35],[1,.34,.04],0,.8);}
+ // relic markers
+ for(let i=0;i<3;i++){let z=-8-i*12;drawBox([3,0.55,z],[.8,1,.8],[.1,.55,.36]);drawBox([3,1.25,z],[.32,.45,.32],[.3,1,.78],frame*.02,0.4);}
+}
+function actor(x,z,isBoss=false,enemy=null){let y=0;let color=isBoss?[.33,.31,.29]:enemy.type==='scout'?[.38,.25,.13]:[.25,.35,.19];let size=isBoss?1.9:enemy.type==='scout'?.75:1.0;
+ drawBox([x,y+size*.62,z],[size*.75,size*1.2,size*.55],color,enemy?Math.atan2(player.x-x,player.z-z):0);
+ drawBox([x,y+size*1.45,z],[size*.55,size*.55,size*.55],isBoss?[.38,.36,.32]:[.42,.32,.22],0);
+ drawBox([x-size*.22,y+size*1.48,z+.27*size],[.12*size,.12*size,.08*size],isBoss?[1,.12,.02]:[.9,.22,.04],0,.2);
+ drawBox([x+size*.22,y+size*1.48,z+.27*size],[.12*size,.12*size,.08*size],isBoss?[1,.12,.02]:[.9,.22,.04],0,.2);
+ drawBox([x-size*.22,y+size*.15,z],[size*.22,size*.5,size*.25],[.15,.16,.14]);drawBox([x+size*.22,y+size*.15,z],[size*.22,size*.5,size*.25],[.15,.16,.14]);
+ if(isBoss){drawBox([x,2.1,z],[2.5,.3,1.1],[.42,.36,.28]);drawBox([x-1.2,1.4,z],[.6,1.7,.6],[.36,.33,.28]);drawBox([x+1.2,1.4,z],[.6,1.7,.6],[.36,.33,.28]);}
+}
+function attack(){if(player.attack>0||player.roll>0)return;player.attack=22;sfx(310,.07,'sawtooth');let hit=false;enemies.forEach(e=>{if(!e.alive)return;let d=Math.hypot(e.x-player.x,e.z-player.z);if(d<3.1){e.hp-=weapons[weapon].damage;hit=true;if(e.hp<=0){e.alive=false;relics++;$('coins').textContent=relics;if(weapon<2&&relics>=2){weapon++;$('weapon').textContent=weapons[weapon].name;say('Weapon upgraded: '+weapons[weapon].name+'!');}else say('Guardian defeated.');}}});if(boss.alive&&remainingEnemies()===0&&Math.hypot(boss.x-player.x,boss.z-player.z)<4){boss.hp-=weapons[weapon].damage;if(boss.hp<=0){boss.alive=false;win();}else say('Hit the Stone Titan!');hit=true;}if(!hit)say(remainingEnemies()>0&&boss.alive&&Math.hypot(boss.x-player.x,boss.z-player.z)<4?'The Stone Titan is sealed. Defeat every guardian first.':'Strike! Move closer to your target.');}
+function heavy(){if(player.heavy>0||player.roll>0)return;player.heavy=44;sfx(110,.16,'triangle');let hit=false;enemies.forEach(e=>{if(e.alive&&Math.hypot(e.x-player.x,e.z-player.z)<3.8){e.hp-=weapons[weapon].heavy;if(e.hp<=0){e.alive=false;relics++;$('coins').textContent=relics;}hit=true;}});if(boss.alive&&remainingEnemies()===0&&Math.hypot(boss.x-player.x,boss.z-player.z)<4.6){boss.hp-=weapons[weapon].heavy;hit=true;if(boss.hp<=0){boss.alive=false;win();}}say(hit?'Power strike lands!':remainingEnemies()>0&&Math.hypot(boss.x-player.x,boss.z-player.z)<4.6?'The Stone Titan is sealed. Defeat every guardian first.':'Heavy attack — get within range.');}
+function usePotion(){if(potions<=0){say('No healing potions left.');return;}if(health>=100){say('Your health is already full.');return;}potions--;health=Math.min(100,health+35);sfx(620,.18,'sine');saveProgress();$('potions').textContent=potions;say('Healing potion used: +35 health.');}
+function pauseGame(){if(!started)return;paused=!paused;$('pauseBtn').innerHTML=paused?'▶<br>RESUME':'Ⅱ<br>PAUSE';say(paused?'Expedition paused.':'Back into the jungle!');last=performance.now();}
+function win(){started=false;paused=false;sfx(740,.3,'sine');try{localStorage.setItem('lostTempleBestRelics',String(Math.max(relics,Number(localStorage.getItem('lostTempleBestRelics')||0))));localStorage.setItem('lostTempleWins',String(Number(localStorage.getItem('lostTempleWins')||0)+1));}catch(e){}if(chapter<2){chapter++;health=Math.min(100,health+25);potions=Math.min(3,potions+1);weapon=Math.min(2,weapon+1);saveProgress();$('overlay').style.display='flex';$('overlay').innerHTML='<div class="panel"><h1>CHAPTER COMPLETE</h1><p>You defeated the '+chapters[chapter-1].boss+' and recovered a Sun Relic. Your weapon has been upgraded, and you gained health and a potion.</p><p><b>Next:</b> '+chapters[chapter].name+'<br>Relics: '+relics+' · Weapon: '+weapons[weapon].name+'</p><button class="primary" id="nextChapter">ENTER NEXT CHAPTER</button><button class="secondary" id="replayChapter" style="width:100%;margin-top:8px">Replay this chapter</button></div>';$('nextChapter').onclick=()=>{player.x=0;player.z=5;player.yaw=0;spawnLevel();started=true;$('overlay').style.display='none';say('New chapter unlocked. The temple grows more dangerous.');last=performance.now();requestAnimationFrame(loop);};$('replayChapter').onclick=()=>{chapter--;player.x=0;player.z=5;spawnLevel();started=true;$('overlay').style.display='none';last=performance.now();requestAnimationFrame(loop);};return;}$('overlay').style.display='flex';$('overlay').innerHTML='<div class="panel"><h1>THE SUN RELIC IS YOURS</h1><p>You defeated the Ash Colossus and reclaimed all three temple chapters. The Lost Temple is yours!</p><p>Relics: '+relics+'<br>Weapon: '+weapons[weapon].name+'<br>Health: '+Math.max(0,Math.round(health))+'%<br>Expeditions won: '+(Number(localStorage.getItem('lostTempleWins')||0))+'</p><button class="primary" id="again">PLAY AGAIN</button></div>';$('again').onclick=()=>{chapter=0;relics=0;weapon=0;health=100;potions=3;saveProgress();location.reload();};}
+function update(dt){if(paused)return;frame++;if(noticeTimer>0)noticeTimer--;if(player.attack>0)player.attack-=dt*60;if(player.heavy>0)player.heavy-=dt*60;if(player.roll>0)player.roll-=dt*60;if(player.invuln>0)player.invuln-=dt*60;
+ let f=(keys.forward||keys.w||keys.ArrowUp?1:0)-(keys.back||keys.s||keys.ArrowDown?1:0),s=(keys.right||keys.d||keys.ArrowRight?1:0)-(keys.left||keys.a||keys.ArrowLeft?1:0);
+ if(keys.heal||keys.h||keys.H){usePotion();keys.heal=false;keys.h=false;keys.H=false;}if(keys.attack||keys[' ']){attack();keys.attack=false;keys[' ']=false;}if(keys.heavy||keys.Shift){heavy();keys.heavy=false;keys.Shift=false;}if(keys.roll||keys.q||keys.Q){player.roll=25;player.invuln=28;keys.roll=false;keys.q=false;keys.Q=false;say('Dodge roll!');}
+ if(player.roll>0){f=1.5;s=0;}let l=Math.hypot(f,s)||1;f/=l;s/=l;let speed=player.roll>0?10:4.4;
+ if(f||s){let dx=s*speed*dt,dz=-f*speed*dt;player.x+=dx;player.z+=dz;player.yaw=Math.atan2(dx,-dz);}
+ player.x=Math.max(-12,Math.min(12,player.x));player.z=Math.max(-46,Math.min(8,player.z));
+ enemies.forEach(e=>{if(!e.alive)return;let dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz);e.phase+=dt;if(d<13){if(d>1.7){e.x+=dx/d*dt*(e.type==='scout'?2.5:1.65);e.z+=dz/d*dt*(e.type==='scout'?2.5:1.65);}else{e.wind+=dt;if(e.wind>1.2){e.wind=0;e.attack=.45;if(player.invuln<=0){health-=e.type==='scout'?7:11;say('Enemy strike! Dodge the next attack.');}}}}if(e.attack>0)e.attack-=dt;if(health<=0)gameOver();});
+ if(boss.alive&&remainingEnemies()===0){let dx=player.x-boss.x,dz=player.z-boss.z,d=Math.hypot(dx,dz);boss.phase+=dt;if(d>3.2&&d<19){boss.x+=dx/d*dt*.9;boss.z+=dz/d*dt*.9;}if(d<5){boss.wind+=dt;if(boss.wind>1.8){boss.wind=0;if(player.invuln<=0){health-=19;say('STONE TITAN SLAM! Dodge away!');}}}if(d<9&&Math.sin(boss.phase*2)>.985&&player.invuln<=0){health-=12;say('Titan shockwave!');}if(health<=0)gameOver();$('bossbar').style.display='block';$('bossfill').style.width=(boss.hp/boss.max*100)+'%';}else if(boss.alive){$('bossbar').style.display='block';$('bossfill').style.width=(boss.hp/boss.max*100)+'%';}else $('bossbar').style.display='none';
+ $('health').textContent=Math.max(0,Math.round(health));if(frame%120===0)saveProgress();$('missionText').textContent=remainingEnemies()>0?'Defeat the remaining guardians: '+remainingEnemies()+' left.':boss.alive?'The seal is broken! Defeat the Stone Titan.':'Temple reclaimed!';
+}
+function gameOver(){started=false;paused=false;sfx(90,.25,'triangle');$('overlay').style.display='flex';$('overlay').innerHTML='<div class="panel"><h1>EXPEDITION FAILED</h1><p>The jungle guardians overwhelmed you. Upgrade your weapon, use dodge rolls, and watch for the Titan’s wind-up before its slam.</p><button class="primary" id="again">TRY AGAIN</button></div>';$('again').onclick=()=>location.reload();}
+let viewProj=I();
+function render(){resize();gl.enable(gl.DEPTH_TEST);gl.clearColor(.06,.12,.13,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);let aspect=canvas.width/canvas.height;let eye=[player.x+Math.sin(player.yaw)*.8,5.2,player.z+8.5],at=[player.x,1.2,player.z-2.4];viewProj=mul(perspective(1.02,aspect,.1,130),look(eye,at,[0,1,0]));world();enemies.forEach(e=>{if(e.alive)actor(e.x,e.z,false,e)});if(boss.alive)actor(boss.x,boss.z,true,{type:'boss'});let swing=player.attack>0||player.heavy>0;let yaw=player.yaw;drawBox([player.x,.9,player.z],[.65,1.5,.42],[.2,.35,.48],yaw);drawBox([player.x,1.85,player.z],[.48,.48,.48],[.64,.43,.27],yaw);drawBox([player.x+Math.sin(yaw)*.55,1.05,player.z-Math.cos(yaw)*.55],[.12,swing?.95:.68,.12],weapon===0?[.72,.75,.8]:weapon===1?[.18,.9,.54]:[1,.64,.12],yaw+(swing?Math.sin(frame*.7)*.8:0),weapon===2?.25:0);drawBox([player.x,.13,player.z],[.95,.15,.75],[.09,.12,.1]);}
+function loop(t){if(!started)return;let dt=Math.min(.04,(t-last)/1000||.016);last=t;if(!paused)update(dt);render();if(started)requestAnimationFrame(loop);}
+$('pauseBtn').onclick=pauseGame;
+$('soundBtn').onclick=()=>{soundOn=!soundOn;$('soundBtn').textContent=soundOn?'🔊 Sound: On':'🔇 Sound: Off';sfx(440,.08);};$('qualityBtn').onclick=()=>{highQuality=!highQuality;$('qualityBtn').textContent=highQuality?'✨ Graphics: High':'⚡ Graphics: Low';say('Graphics quality updated.');};$('resetBtn').onclick=()=>{try{localStorage.removeItem('lostTempleSave');localStorage.removeItem('lostTempleWins');localStorage.removeItem('lostTempleBestRelics');}catch(e){}chapter=0;relics=0;weapon=0;health=100;potions=3;$('coins').textContent='0';$('weapon').textContent=weapons[0].name;$('health').textContent='100';$('potions').textContent='3';say('Saved progress reset.');};loadProgress();
+$('start').onclick=()=>{spawnLevel();started=true;paused=false;$('potions').textContent=potions;$('overlay').style.display='none';say('Move with the left controls. Close in, strike, and dodge.');last=performance.now();requestAnimationFrame(loop);};
+window.addEventListener('keydown',e=>{if(e.key==='m'||e.key==='M'){soundOn=!soundOn;$('soundBtn').textContent=soundOn?'🔊 Sound: On':'🔇 Sound: Off';sfx(440,.08);return;}if(e.key==='p'||e.key==='P'){pauseGame();e.preventDefault();return;}keys[e.key]=true;if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});window.addEventListener('keyup',e=>keys[e.key]=false);
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;const down=e=>{e.preventDefault();keys[k]=true;b.classList.add('down');};const up=e=>{e.preventDefault();keys[k]=false;b.classList.remove('down');};b.addEventListener('pointerdown',down);['pointerup','pointercancel','pointerleave','lostpointercapture'].forEach(ev=>b.addEventListener(ev,up));});
+window.addEventListener('resize',resize);resize();render();
+})();
+</script>
+<script>if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});</script></body></html>
